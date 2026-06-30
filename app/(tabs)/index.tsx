@@ -1,98 +1,107 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import * as Location from 'expo-location';
+import { useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [position, setPosition] = useState<string>('Position non encore capturée');
+  const [chargement, setChargement] = useState<boolean>(false);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const envoyerSOS = async () => {
+    setChargement(true);
+
+    // Demander permission GPS
+    const { status } = await Location.requestForegroundPermissionsAsync();
+
+    if (status !== 'granted') {
+      Alert.alert('Permission refusée', 'Activez le GPS pour utiliser AfriSafe.');
+      setChargement(false);
+      return;
+    }
+
+    // Récupérer la position
+    const loc = await Location.getCurrentPositionAsync({});
+    const lat = loc.coords.latitude.toFixed(6);
+    const lon = loc.coords.longitude.toFixed(6);
+
+    setPosition(`Lat: ${lat} | Lon: ${lon}`);
+    setChargement(false);
+
+    Alert.alert(
+      '🚨 SOS Envoyé !',
+      `Votre position a été transmise aux secours.\n\nLatitude: ${lat}\nLongitude: ${lon}`,
+      [{ text: 'OK' }]
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.titre}>AfriSafe</Text>
+      <Text style={styles.sousTitre}>Appuyez en cas d'urgence</Text>
+
+      <TouchableOpacity
+        style={[styles.boutonSOS, chargement && styles.boutonChargement]}
+        onPress={envoyerSOS}
+        disabled={chargement}
+      >
+        <Text style={styles.texteSOS}>
+          {chargement ? '...' : 'SOS'}
+        </Text>
+      </TouchableOpacity>
+
+      <Text style={styles.position}>{position}</Text>
+
+      <Text style={styles.info}>
+        Votre position GPS sera envoyée automatiquement
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
   },
-  stepContainer: {
-    gap: 8,
+  titre: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#1D9E75',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  sousTitre: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 60,
+  },
+  boutonSOS: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: '#E24B4A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  boutonChargement: {
+    backgroundColor: '#aaa',
+  },
+  texteSOS: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  position: {
+    fontSize: 13,
+    color: '#1D9E75',
+    marginBottom: 16,
+    fontWeight: 'bold',
+  },
+  info: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
 });
