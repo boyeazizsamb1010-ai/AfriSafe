@@ -6,31 +6,42 @@ export default function HomeScreen() {
   const [position, setPosition] = useState<string>('Position non encore capturée');
   const [chargement, setChargement] = useState<boolean>(false);
 
-  const envoyerSOS = async () => {
+const envoyerSOS = async () => {
     setChargement(true);
 
-    // Demander permission GPS
     const { status } = await Location.requestForegroundPermissionsAsync();
-
     if (status !== 'granted') {
       Alert.alert('Permission refusée', 'Activez le GPS pour utiliser AfriSafe.');
       setChargement(false);
       return;
     }
 
-    // Récupérer la position
     const loc = await Location.getCurrentPositionAsync({});
     const lat = loc.coords.latitude.toFixed(6);
     const lon = loc.coords.longitude.toFixed(6);
 
     setPosition(`Lat: ${lat} | Lon: ${lon}`);
-    setChargement(false);
 
-    Alert.alert(
-      '🚨 SOS Envoyé !',
-      `Votre position a été transmise aux secours.\n\nLatitude: ${lat}\nLongitude: ${lon}`,
-      [{ text: 'OK' }]
-    );
+    // Envoyer au serveur Flask
+    try {
+      const response = await fetch('http://192.168.100.2:5000/sos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: lat, longitude: lon }),
+      });
+
+      const result = await response.json();
+      setChargement(false);
+
+      Alert.alert(
+        '🚨 SOS Envoyé !',
+        `SMS envoyé au +221783537160\n\nLatitude: ${lat}\nLongitude: ${lon}`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      setChargement(false);
+      Alert.alert('Erreur', 'Impossible de contacter le serveur.');
+    }
   };
 
   return (
